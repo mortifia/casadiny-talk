@@ -1,0 +1,6 @@
+postgres
+azurecredentialcache
+config_local.py
+servers.json
+sessions
+pgadmin4

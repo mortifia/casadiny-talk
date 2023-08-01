@@ -1,0 +1,42 @@
+name: "casadiny-talk"
+version: "0.0.0"
+
+
+services:
+  pgadmin4:
+    # https://stackoverflow.com/questions/55003036/accesing-another-service-using-its-url-from-inside-the-docker-compose-network
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "t.t@t.ttt"
+      PGADMIN_DEFAULT_PASSWORD: "t"
+    volumes:
+      - ./pgadmin:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+      - ./pgadmin/config_local.py:/pgadmin4/config_local.py
+    networks:
+      - casadiny
+
+  postgres:
+    image: postgres:15
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "t"
+      POSTGRES_USER: "t"
+      POSTGRES_DB: "casadiny_talk"
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    networks:
+      - casadiny
+
+networks:
+  casadiny:
+    driver: bridge
+
+volumes:
+  # pgadmin:
+  postgres:
