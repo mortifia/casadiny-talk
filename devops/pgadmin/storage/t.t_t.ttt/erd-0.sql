@@ -60,12 +60,10 @@ CREATE TABLE IF NOT EXISTS public.vote
 CREATE TABLE IF NOT EXISTS public."authorization"
 (
     user_id integer NOT NULL,
-    acess_token_id smallint NOT NULL,
-    acess_token_key character varying(128) NOT NULL,
-    acess_token_expires timestamp with time zone NOT NULL,
+    acess_token text NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
     refresh_token character varying(128) NOT NULL,
-    refresh_token_expires timestamp with time zone NOT NULL,
-    PRIMARY KEY (user_id, acess_token_id)
+    PRIMARY KEY (user_id, refresh_token)
 );
 
 ALTER TABLE IF EXISTS public.user_role
