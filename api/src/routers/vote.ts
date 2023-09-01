@@ -15,10 +15,9 @@ const router = express.Router();
  * CREATE TABLE IF NOT EXISTS public.vote
  * (
  *     user_id integer NOT NULL,
- *     post_user_id integer NOT NULL,
- *     post_created timestamp with time zone NOT NULL,
+ *     post_id character(22) NOT NULL,
  *     positive boolean NOT NULL DEFAULT true,
- *     CONSTRAINT vote_pkey PRIMARY KEY (user_id, post_user_id, post_created)
+ *     CONSTRAINT vote_pkey PRIMARY KEY (user_id, post_id)
  * );
  */
 
@@ -32,7 +31,7 @@ type vote = {
 //vote a post by id in url
 /**
  * @openapi
- * /vote/{post_user_id}/{post_created}:
+ * /vote/{post_id}:
  *  post:
  *   description: vote a post by id in url
  *   security:
@@ -41,18 +40,11 @@ type vote = {
  *    - vote
  *   parameters:
  *    - in: path
- *      name: post_user_id
- *      schema:
- *       type: integer
- *      required: true
- *      description: user_id of the post
- *    - in: path
- *      name: post_created
+ *      name: post_id
  *      schema:
  *       type: string
- *      format: date-time
  *      required: true
- *      description: created of the post
+ *      description: user_id of the post
  *   requestBody:
  *    content:
  *     application/json:
@@ -78,23 +70,35 @@ type vote = {
  *    500:
  *     description: Internal Server Error
 */
-router.post('/:post_user_id/:post_created', auth, async (req: AuthenticatedRequest, res) => {
+router.post('/:post_id', auth, async (req: AuthenticatedRequest, res) => {
     const user_id = req.token?.user_id || null;
     if (user_id == null) {
         res.status(401).send('Unauthorized');
         return;
     }
     //post_created = "2023-08-31T04:02:53.603Z"
-    const { post_user_id, post_created: tmp_post_created } = req.params;
-    if (isNaN(Date.parse(tmp_post_created))) {
-        res.status(400).send('Bad Request');
-        return;
-    }
-    const post_created = new Date(tmp_post_created);
-
+    const { post_id } = req.params;
     let { vote } = req.body;
+    //check if vote is 1, -1 or 0 or null or undefined else return 400
+    console.log(vote);
+    switch (vote) {
+        case 1:
+        case -1:
+        case 0:
+            vote = parseInt(vote);
+            break;
+        case null:
+        case undefined:
+            vote = 0;
+            break;
+        default:
+            res.status(400).send('Bad Request');
+            return;
+    }
+    console.log("wololo");
     //check if post exists
-    let post = await sql<vote[]>`SELECT * FROM post WHERE user_id = ${post_user_id} LIMIT 1`;
+    let post = await sql<vote[]>`SELECT * FROM post
+      WHERE id = ${post_id}`;
     if (post.length == 0) {
         res.status(404).send('Not Found');
         return;
@@ -103,25 +107,10 @@ router.post('/:post_user_id/:post_created', auth, async (req: AuthenticatedReque
     //get vote if exists to check if is nedeed to update post score
     let old_vote = await sql<vote[]>`SELECT * FROM vote
       WHERE user_id = ${user_id}
-        AND post_user_id = ${post_user_id}
-        AND post_created = ${post_created}`;
+        AND post_id = ${post_id}`;
     //calculate difference between old_vote.positive and vote
     console.log(old_vote.length > 0 ? "vote : " + old_vote[0].positive : "no vote");
     let difference = 0;
-    switch (vote) {
-        case 1:
-            vote = 1;
-            break;
-        case -1:
-            vote = -1;
-            break;
-        case 0:
-            vote = 0;
-            break;
-        default:
-            res.status(400).send('Bad Request');
-            return;
-    }
     if (old_vote.length > 0) {
         //calculate difference between old_vote.positive and vote
         difference = vote - (old_vote[0].positive ? 1 : -1);
@@ -135,21 +124,25 @@ router.post('/:post_user_id/:post_created', auth, async (req: AuthenticatedReque
         if (vote == 0) {
             await sql`DELETE FROM vote
               WHERE user_id = ${user_id}
-                AND post_user_id = ${post_user_id}
-                AND post_created = ${post_created}::timestamp with time zone`;
+                AND post_id = ${post_id}`;
         }
         //if vote is 1 or -1
         else if (vote != 0) {
             //insert or update vote
-            await sql`INSERT INTO vote (user_id, post_user_id, post_created, positive)
-            VALUES (${user_id}, ${post_user_id}, ${post_created}::timestamp with time zone, ${vote})
-            ON CONFLICT (user_id, post_user_id, post_created)
-            DO UPDATE SET positive = ${vote}`;
+            await sql`INSERT INTO vote (user_id, post_id, positive)
+                VALUES (${user_id}, ${post_id}, ${vote})
+                ON CONFLICT (user_id, post_id)
+                DO UPDATE SET positive = ${vote}`;
         }
         //update post score
-        await sql`UPDATE post SET score = score + ${difference} WHERE user_id = ${post_user_id} AND created = ${post_created}`;
+        await sql`UPDATE post
+            SET score = score + ${difference}
+            WHERE id = ${post_id}`;
+        res.status(200).send('OK');
+        return;
     }
-    res.status(200).send('OK');
+    res.status(409).send("Conflict (vote didn't change)");
+    return;
 });
 
 export default router;
