@@ -6,6 +6,7 @@ import swaggerJsDoc from 'swagger-jsdoc';
 
 import auth from './routers/auth';
 import post from './routers/post';
+import vote from './routers/vote';
 
 dotenv.config();
 
@@ -48,6 +49,7 @@ app.get('/', (req, res) => {
 
 app.use('/auth', auth);
 app.use('/post', post);
+app.use('/vote', vote);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
