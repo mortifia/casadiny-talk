@@ -80,7 +80,6 @@ router.post('/:post_id', auth, async (req: AuthenticatedRequest, res) => {
     const { post_id } = req.params;
     let { vote } = req.body;
     //check if vote is 1, -1 or 0 or null or undefined else return 400
-    console.log(vote);
     switch (vote) {
         case 1:
         case -1:
@@ -95,7 +94,6 @@ router.post('/:post_id', auth, async (req: AuthenticatedRequest, res) => {
             res.status(400).send('Bad Request');
             return;
     }
-    console.log("wololo");
     //check if post exists
     let post = await sql<vote[]>`SELECT * FROM post
       WHERE id = ${post_id}`;
@@ -103,13 +101,11 @@ router.post('/:post_id', auth, async (req: AuthenticatedRequest, res) => {
         res.status(404).send('Not Found');
         return;
     }
-    console.log("post found");
     //get vote if exists to check if is nedeed to update post score
     let old_vote = await sql<vote[]>`SELECT * FROM vote
       WHERE user_id = ${user_id}
         AND post_id = ${post_id}`;
     //calculate difference between old_vote.positive and vote
-    console.log(old_vote.length > 0 ? "vote : " + old_vote[0].positive : "no vote");
     let difference = 0;
     if (old_vote.length > 0) {
         //calculate difference between old_vote.positive and vote
@@ -117,7 +113,6 @@ router.post('/:post_id', auth, async (req: AuthenticatedRequest, res) => {
     } else {
         difference = vote;
     }
-    console.log(difference);
     //if diff != 0 (vote changed)
     if (difference != 0) {
         //if vote is 0
