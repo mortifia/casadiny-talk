@@ -1,19 +1,15 @@
 @import 'material-symbols';
 
-@font-face{
-    font-family: 'Mulish';
-    src: url('~/fonts/Mulish-VariableFont_wght.ttf') format('truetype');
-}
-
 *{
     font-family: 'Mulish', sans-serif;
+    color: #363E52;
 }
 
 .material-symbols-outlined {
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48;
   }
 
-body{
+  body{
     background-image: url('~/assets/background.svg');
     background-size: 24px;
 }

@@ -10,14 +10,17 @@
   },
   "devDependencies": {
     "@nuxt/devtools": "latest",
-    "@types/node": "^18.17.3",
+    "@nuxtjs/google-fonts": "^3.0.2",
+    "@pinia-plugin-persistedstate/nuxt": "^1.1.1",
     "nuxt": "^3.7.0"
-  },
-  "dependencies": {
-    "@pinia/nuxt": "^0.4.11",
-    "pinia": "^2.1.6"
   },
   "overrides": {
     "vue": "latest"
+  },
+  "dependencies": {
+    "@pinia/nuxt": "^0.4.11",
+    "google-fonts": "^1.0.0",
+    "material-symbols": "^0.11.0",
+    "pinia": "^2.1.6"
   }
 }
