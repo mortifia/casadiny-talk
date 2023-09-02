@@ -54,6 +54,9 @@ type postWithUsernameAndVote = postWithUsername & {
  *   description: get all posts with pagination and choice to wiew only post by followed users
  *   tags:
  *    - post
+ *   responses:
+ *    200:
+ *     description: posts
  */
 router.get('/', auth, async (req, res) => {
     const page = parseInt(req.query.page as string || '0');
