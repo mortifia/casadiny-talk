@@ -309,6 +309,46 @@ router.post('/signout', async (req, res) => {
     res.status(200).json('User logged out successfully');
 });
 
+//generate reset password token (send email)
+/**
+ * @openapi
+ * /auth/reset-password:
+ * post:
+ * summary: Generate reset password token (send email)
+ * description: Generate reset password token (send email)
+ * tags:
+ * - auth
+ * requestBody:
+ * required: true
+ * content:
+ * application/json:
+ * schema:
+ * type: object
+ * required:
+ * - email
+ * properties:
+ * email:
+ * type: string
+ * responses:
+ * '200':
+ * description: Reset password has been sent to your email if email exists
+ * '400':
+ * description: Email is empty
+ */
+router.post('/reset-password', async (req, res) => {
+    const { email } = req.body;
+    //check if email is empty
+    if (!email) {
+        return res.status(400).json({ error: 'Email is empty' });
+    }
+    //check if email exists
+    const user = await sql`SELECT * FROM "user" WHERE email = ${email}`;
+    if (user.length === 0) {
+        return res.status(200).json('Reset password has been sent to your email if email exists');
+    }
+    //! create table for reset password token
+});
+
 export interface AuthenticatedRequest extends express.Request {
     token?: {
         user_id: number,
