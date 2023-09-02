@@ -1,5 +1,6 @@
 //typescript, dotenv, express, swagger-jsdoc, swagger-ui-express
 import express from 'express';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
@@ -9,9 +10,19 @@ import post from './routers/post';
 import vote from './routers/vote';
 import follow from './routers/follow';
 
-dotenv.config();
+// //test mail
+// import { test } from './models/mail';
+// test();
+
+// dotenv.config();
 
 const app = express();
+app.use(cors({
+  "origin": "*",
+  "methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
+  "preflightContinue": false,
+  "optionsSuccessStatus": 204
+}))
 app.use(express.json());
 const port = process.env.PORT || 3000;
 

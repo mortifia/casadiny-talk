@@ -86,9 +86,9 @@ async function generateTokens(user_id: number) {
  *         type: string
  *        password:
  *         type: string
- *        first_name:
+ *        firstname:
  *         type: string
- *        last_name:
+ *        lastname:
  *         type: string
  *        phone:
  *         type: string
@@ -103,7 +103,8 @@ async function generateTokens(user_id: number) {
  *     description: Internal server error
 */
 router.post('/signup/local', async (req, res) => {
-    const { username, email, password, first_name, last_name, phone } = req.body;
+    const { email, password, firstname, lastname, phone } = req.body;
+    let { username } = req.body;
     //check if email or password is empty
     if (!email || !password) {
         return res.status(400).json({ error: 'Email or password is empty' });
@@ -117,13 +118,12 @@ router.post('/signup/local', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     //if no username, generate username by random
     if (!username) {
-        const username = Math.random().toString(36).substring(2, 15);
-        console.debug(`Generated username: ${username}`);
+        username = Math.random().toString(36).substring(2, 15);
     }
     //insert user into database
     const newUser = await sql`
         INSERT INTO "user" (username, email, password, first_name, last_name, phone)
-        VALUES (${username}, ${email}, ${hashedPassword}, ${first_name}, ${last_name}, ${phone})
+        VALUES (${username}, ${email}, ${hashedPassword}, ${firstname || ""}, ${firstname || ""}, ${phone || ""})
         RETURNING id, username, email, first_name, last_name, phone`;
     //respond with 201 status code
     return res.status(201).json('User created successfully');
@@ -309,31 +309,45 @@ router.post('/signout', async (req, res) => {
     res.status(200).json('User logged out successfully');
 });
 
+
+/**
+ * @sql
+ * CREATE TABLE IF NOT EXISTS public.password_reset
+ * (
+ *     user_id integer NOT NULL,
+ *     mail_key character(22) NOT NULL,
+ *     reset_key character(22) NOT NULL,
+ *     created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ *     ip cidr NOT NULL,
+ *     PRIMARY KEY (user_id, mail_key)
+ * );
+*/
+
 //generate reset password token (send email)
 /**
  * @openapi
  * /auth/reset-password:
- * post:
- * summary: Generate reset password token (send email)
- * description: Generate reset password token (send email)
- * tags:
- * - auth
- * requestBody:
- * required: true
- * content:
- * application/json:
- * schema:
- * type: object
- * required:
- * - email
- * properties:
- * email:
- * type: string
- * responses:
- * '200':
- * description: Reset password has been sent to your email if email exists
- * '400':
- * description: Email is empty
+ *  post:
+ *   summary: Generate reset password token (send email)
+ *   description: Generate reset password token (send email)
+ *   tags:
+ *    - auth
+ *   requestBody:
+ *    required: true
+ *    content:
+ *     application/json:
+ *      schema:
+ *       type: object
+ *       required:
+ *        - email
+ *       properties:
+ *        email:
+ *         type: string
+ *   responses:
+ *    '200':
+ *     description: Reset password has been sent to your email if email exists
+ *    '400':
+ *     description: Email is empty
  */
 router.post('/reset-password', async (req, res) => {
     const { email } = req.body;
@@ -346,7 +360,18 @@ router.post('/reset-password', async (req, res) => {
     if (user.length === 0) {
         return res.status(200).json('Reset password has been sent to your email if email exists');
     }
-    //! create table for reset password token
+    //generate mail key
+    const mailKey = Buffer.from(crypto.randomUUID().replaceAll("-", ""), 'hex').toString('base64url');
+    //generate reset key
+    const resetKey = Buffer.from(crypto.randomUUID().replaceAll("-", ""), 'hex').toString('base64url');
+    //insert into database
+    console.log(req.ip)
+    await sql`INSERT INTO password_reset (user_id, mail_key, reset_key, ip)
+        VALUES (${user[0].id}, ${mailKey}, ${resetKey}, ${req.ip})`;
+    //send email with nodemailer
+    //TODO
+    res.status(200).json('Reset password has been sent to your email if email exists');
+    return;
 });
 
 export interface AuthenticatedRequest extends express.Request {

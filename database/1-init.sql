@@ -67,6 +67,16 @@ CREATE TABLE IF NOT EXISTS public.vote
     CONSTRAINT vote_pkey PRIMARY KEY (user_id, post_id)
 );
 
+CREATE TABLE IF NOT EXISTS public.password_reset
+(
+    user_id integer NOT NULL,
+    mail_key character(22) NOT NULL,
+    reset_key character(22) NOT NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ip cidr NOT NULL,
+    PRIMARY KEY (user_id, mail_key)
+);
+
 ALTER TABLE IF EXISTS public."authorization"
     ADD FOREIGN KEY (user_id)
     REFERENCES public."user" (id) MATCH SIMPLE
@@ -132,6 +142,14 @@ ALTER TABLE IF EXISTS public.vote
 
 
 ALTER TABLE IF EXISTS public.vote
+    ADD FOREIGN KEY (user_id)
+    REFERENCES public."user" (id) MATCH SIMPLE
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+    NOT VALID;
+
+
+ALTER TABLE IF EXISTS public.password_reset
     ADD FOREIGN KEY (user_id)
     REFERENCES public."user" (id) MATCH SIMPLE
     ON UPDATE CASCADE
