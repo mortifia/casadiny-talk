@@ -51,7 +51,9 @@ type postWithUsernameAndVote = postWithUsername & {
  * @openapi
  * /post:
  *  get:
- *   description: get all posts with pagination and choice to wiew only post by followed users
+ *   description: get all posts with pagination
+ *   security:
+ *    - bearerAuth: []
  *   tags:
  *    - post
  *   responses:
@@ -143,5 +145,185 @@ router.post('/', auth, async (req: AuthenticatedRequest, res) => {
     }
     res.status(201).json(post);
 });
+
+//delete a post
+/**
+ * @openapi
+ * /post/{id}:
+ *  delete:
+ *   description: delete a post
+ *   security:
+ *    - bearerAuth: []
+ *   tags:
+ *    - post
+ *   parameters:
+ *    - name: id
+ *      in: path
+ *      required: true
+ *      schema:
+ *       type: string
+ *      example: "hClS0qASTC6x7xLHh4uYmQ"
+ *   responses:
+ *    200:
+ *     description: post deleted
+ *    400:
+ *     description: bad request
+ *    401:
+ *     description: unauthorized
+ *    500:
+ *     description: internal server error
+*/
+router.delete('/:id', auth, async (req: AuthenticatedRequest, res) => {
+    const user_id = req.token?.user_id || null;
+    const { id } = req.params;
+    if (user_id == null) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+    if (!id) {
+        res.status(400).json({ error: 'id is required' });
+        return;
+    }
+    // check if the user is the owner of the post
+    const post = await sql<post[]>`SELECT * FROM post
+        WHERE id = ${id}
+        AND user_id = ${user_id}
+        LIMIT 1`;
+    if (post.length === 0) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+    // delete the post
+    const deleted = await sql<post[]>`DELETE FROM post
+        WHERE id = ${id}`;
+    if (deleted.length === 0) {
+        res.status(500).json({ error: 'internal server error' });
+        return;
+    }
+    res.status(200).json({ message: 'post deleted' });
+});
+
+// get a post by id
+/**
+ * @openapi
+ * /post/{id}:
+ *  get:
+ *   description: get a post by id
+ *   security:
+ *    - bearerAuth: []
+ *   tags:
+ *    - post
+ *   parameters:
+ *    - name: id
+ *      in: path
+ *      required: true
+ *      schema:
+ *       type: string
+ *      example: "hClS0qASTC6x7xLHh4uYmQ"
+ *   responses:
+ *    200:
+ *     description: post
+ *    400:
+ *     description: bad request
+ *    401:
+ *     description: unauthorized
+ *    404:
+ *     description: post not found
+ *    500:
+ *     description: internal server error
+*/
+router.get('/:id', auth, async (req: AuthenticatedRequest, res) => {
+    const user_id = req.token?.user_id || null;
+    const { id } = req.params;
+    if (!id) {
+        res.status(400).json({ error: 'id is required' });
+        return;
+    }
+    let post: postWithUsernameAndVote[] | postWithUsername[] = [];
+    if (user_id == null) {
+        post = await sql<postWithUsername[]>` SELECT p.*, u.username FROM post p
+            JOIN "user" u ON p.user_id = u.id
+            WHERE p.id = ${id}
+            LIMIT 1`;
+    } else {
+        post = await sql<postWithUsernameAndVote[]>` SELECT p.*, u.username, v.positive FROM post p
+            JOIN "user" u ON p.user_id = u.id
+            LEFT JOIN vote v ON p.id = v.post_id AND v.user_id = ${user_id}
+            WHERE p.id = ${id}
+            LIMIT 1`;
+    }
+    if (post.length === 0) {
+        res.status(404).json({ error: 'post not found' });
+        return;
+    }
+    res.status(200).json(post[0]);
+    return;
+});
+
+// get replies of a post
+/**
+ * @openapi
+ * /post/{id}/replies/{page}:
+ *  get:
+ *   description: get replies of a post
+ *   security:
+ *    - bearerAuth: []
+ *   tags:
+ *    - post
+ *   parameters:
+ *    - name: id
+ *      in: path
+ *      required: true
+ *      schema:
+ *       type: string
+ *      example: "hClS0qASTC6x7xLHh4uYmQ"
+ *    - name: page
+ *      in: path
+ *      required: true
+ *      schema:
+ *       type: integer
+ *      example: 0
+ *   responses:
+ *    200:
+ *     description: replies
+ *    400:
+ *     description: bad request
+ *    401:
+ *     description: unauthorized
+ *    404:
+ *     description: post not found
+ *    500:
+ *     description: internal server error
+*/
+router.get('/:id/replies', auth, async (req: AuthenticatedRequest, res) => {
+    const user_id = req.token?.user_id || null;
+    const { id, page } = req.params;
+    const limit = 25;
+    if (!id) {
+        res.status(400).json({ error: 'id is required' });
+        return;
+    }
+    let post: postWithUsernameAndVote[] | postWithUsername[] = [];
+    if (user_id == null) {
+        post = await sql<postWithUsername[]>` SELECT p.*, u.username FROM post p
+            JOIN "user" u ON p.user_id = u.id
+            WHERE p.post_parent_id = ${id}
+            ORDER BY p.created ASC
+            LIMIT ${limit} OFFSET ${Number(page || 0) * limit}`;
+    } else {
+        post = await sql<postWithUsernameAndVote[]>` SELECT p.*, u.username, v.positive FROM post p
+            JOIN "user" u ON p.user_id = u.id
+            LEFT JOIN vote v ON p.id = v.post_id AND v.user_id = ${user_id}
+            WHERE p.post_parent_id = ${id}
+            ORDER BY p.created ASC
+            LIMIT ${limit} OFFSET ${Number(page || 0) * limit}`;
+    }
+    return res.status(200).json(post);
+});
+
+
+
+
+
 
 export default router;
