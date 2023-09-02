@@ -19,7 +19,7 @@ const router = express.Router();
  *     positive boolean NOT NULL DEFAULT true,
  *     CONSTRAINT vote_pkey PRIMARY KEY (user_id, post_id)
  * );
- */
+*/
 
 type vote = {
     user_id: number,
@@ -123,9 +123,11 @@ router.post('/:post_id', auth, async (req: AuthenticatedRequest, res) => {
         }
         //if vote is 1 or -1
         else if (vote != 0) {
+            console.log('vote', vote);
+            console.log(vote ? true : false);
             //insert or update vote
             await sql`INSERT INTO vote (user_id, post_id, positive)
-                VALUES (${user_id}, ${post_id}, ${vote})
+                VALUES (${user_id}, ${post_id}, ${vote ? true : false})
                 ON CONFLICT (user_id, post_id)
                 DO UPDATE SET positive = ${vote}`;
         }
