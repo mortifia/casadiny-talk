@@ -7,8 +7,19 @@
         <span class="material-symbols-outlined"> search </span>
       </button>
     </div>
-    <button v-if="!token" class="sign-in-btn" @click="$emit('open-sign-in')">
+    <button
+      v-if="tokenStore.token === ''"
+      class="sign-in-btn"
+      @click="$emit('open-sign-in')"
+    >
       Se connecter
+    </button>
+    <button
+      v-if="tokenStore.token !== ''"
+      class="sign-out-btn"
+      @click="tokenStore.logout"
+    >
+      Se déconnecter
     </button>
   </div>
 </template>
@@ -17,7 +28,6 @@
 import { useTokenStore } from "@/stores/token";
 
 const tokenStore = useTokenStore();
-const token = tokenStore.token;
 </script>
 <style scoped>
 .header {
@@ -76,7 +86,8 @@ img {
   border: 4px solid #ff9d3b;
 }
 
-.sign-in-btn {
+.sign-in-btn,
+.sign-out-btn {
   border-radius: 16px;
   border: none;
   background-color: transparent;
@@ -86,7 +97,8 @@ img {
   font-weight: 600;
 }
 
-.sign-in-btn:hover {
+.sign-in-btn:hover,
+.sign-out-btn:hover {
   text-decoration: overline;
 }
 
