@@ -24,6 +24,7 @@
           />
         </div>
         <span class="error" v-if="error !== ''">{{ error }}</span>
+        <span class="success" v-if="success !== ''"> {{ success }}</span>
         <input type="submit" value="Se connecter" />
         <span class="sign-up">
           Nouveau par ici ?
@@ -38,10 +39,12 @@
 
 <script setup lang="ts">
 import { useTokenStore } from "~/stores/token";
+const tokenStore = useTokenStore();
 
 const email = ref("");
 const password = ref("");
 const error = ref("");
+const success = ref<string>("");
 const emit = defineEmits(["close"]);
 
 const signIn = async () => {
@@ -49,6 +52,44 @@ const signIn = async () => {
     error.value = "Veuillez remplir tous les champs";
     return;
   }
+
+  const res = await fetch("http://talk.casadiny.ovh:3000/auth/signin/local", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: email.value,
+      password: password.value,
+    }),
+  })
+    .then((res) => {
+      if (res.status === 400) {
+        throw new Error("Email ou mot de passe non fourni.");
+      }
+      if (res.status === 500) {
+        throw new Error(
+          "Une erreur est survenue. Merci de réessayer plus tard."
+        );
+      }
+      if (res.status === 401) {
+        throw new Error("Email ou mot de passe incorrect.");
+      }
+      return res.json();
+    })
+    .catch((err) => {
+      console.log(err);
+      error.value = err.message;
+    });
+  console.log(res);
+  tokenStore.setToken(res.acessToken);
+  tokenStore.setTokenExpiresIn(res.expires_in);
+  tokenStore.setRefreshToken(res.refreshToken.token);
+  tokenStore.setRefreshTokenExpiresIn(res.refreshToken.expires);
+  success.value = "Vous êtes connecté !";
+  setTimeout(() => {
+    emit("close");
+  }, 2000);
 };
 </script>
 
@@ -65,6 +106,10 @@ const signIn = async () => {
 
 .error {
   color: #ff1e1e;
+}
+
+.success {
+  color: #41cc80;
 }
 
 h2 {
