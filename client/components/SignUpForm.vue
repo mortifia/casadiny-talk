@@ -67,6 +67,7 @@
         </div>
         <span>* = champs obligatoires</span>
         <span class="error" v-if="error !== ''">{{ error }}</span>
+        <span class="success" v-if="success !== ''">{{ success }}</span>
         <input type="submit" value="S'inscrire" />
         <span class="sign-in">
           Déjà inscrit ?
@@ -87,6 +88,7 @@ const firstname = ref<string | null>(null);
 const lastname = ref<string | null>(null);
 const phone = ref<string | null>(null);
 const error = ref("");
+const success = ref("");
 
 const emit = defineEmits(["close", "showSignIn"]);
 
@@ -95,7 +97,11 @@ const signUp = async () => {
     error.value = "Veuillez remplir tous les champs requis";
     return;
   }
-  const res = await fetch("http://talk.casadiny.ovh:3000/auth/signup/local", {
+  if (error.value !== "") error.value = "";
+  const res: void | {
+    status: number;
+    body: Promise<any>;
+  } = await fetch("http://talk.casadiny.ovh:3000/auth/signup/local", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -110,8 +116,10 @@ const signUp = async () => {
     }),
   })
     .then((r) => {
-      console.log(r.status);
-      return r.json();
+      return {
+        status: r.status,
+        body: r.json(),
+      };
     })
     .catch((e) => {
       console.log(e);
@@ -119,6 +127,22 @@ const signUp = async () => {
         "Une erreur est survenue. Merci de réessayer ultérieurement.";
     });
   console.log(res);
+  if (typeof res !== "undefined" && res.status !== 201) {
+    if (res.status === 409) {
+      error.value = "Un compte avec cette adresse email existe déjà";
+      return;
+    }
+    if (res.status === 400) {
+      error.value = "Email ou mot de passe manquant";
+      return;
+    }
+    error.value = "Une erreur est survenue. Merci de réessayer ultérieurement.";
+    return;
+  }
+  success.value = "Votre compte a bien été créé !";
+  setTimeout(() => {
+    emit("close");
+  }, 2000);
 };
 </script>
 
@@ -135,6 +159,10 @@ const signUp = async () => {
 
 .error {
   color: #ff1e1e;
+}
+
+.success {
+  color: #41cc80;
 }
 
 h2 {
