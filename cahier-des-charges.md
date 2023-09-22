@@ -21,13 +21,13 @@ Objet : plateforme de communication type Twitter
 
 - Désactiver un post (la raison doit être affichée à la place du contenu du post)
 - Warn un utilisateur (au bout de 3 warn, l'utilisateur est ban)
+- Ban un utilisateur (le rendre silencieux) (Le motif de ban doit être affiché sur le profil)
 
 ### Fonctionnalités admin
 
 - Ajouter/Retirer un modérateur (rôle lié au compte user)
 - Ajouter/Retirer un admin
 - Supprimer un utilisateur (pour les bots)
-- Ban un utilisateur (le rendre silencieux) (Le motif de ban doit être affiché sur le profil)
 
 ### Stack tech
 
