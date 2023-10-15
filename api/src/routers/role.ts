@@ -10,7 +10,7 @@ dotenv.config();
 const router = express.Router();
 
 
-type Role = {
+export type Role = {
     role_id: number,
     role_name: string,
     role_description: string
@@ -22,7 +22,7 @@ type Role = {
 // only admin users can create a new role
 /**
  * @openapi
- * /role:
+ * /role/admin:
  *   post:
  *     description: create a new role
  *     security:
@@ -50,7 +50,7 @@ type Role = {
  *       500:
  *         description: Internal Server Error
 */
-router.post('/', auth, async (req: AuthenticatedRequest, res) => {
+router.post('/admin', auth, need_roles, async (req: AuthenticatedAndRolesRequest, res) => {
     const user_id = req.token?.user_id;
     const { role_name, role_description } = req.body;
     if (user_id == null) {
@@ -62,9 +62,8 @@ router.post('/', auth, async (req: AuthenticatedRequest, res) => {
         res.status(400).json({ error: 'Bad Request' });
         return;
     }
-    //check if user is admin
-    const user = await sql`SELECT admin FROM public.user WHERE id = ${user_id}`;
-    if (user.count === 0 || user[0].admin !== true) {
+    //check if user has authority to create role
+    if (await has_aceess(req.roles || [], [1], user_id) === false) {
         res.status(401).json({ error: 'Unauthorized' });
         return;
     }
@@ -84,7 +83,7 @@ router.post('/', auth, async (req: AuthenticatedRequest, res) => {
 // only admin users and role 1 (admin) can update a role
 /**
  * @openapi
- * /role:
+ * /role/admin:
  *   put:
  *     summary: Update a role
  *     description: Update a role
@@ -116,7 +115,7 @@ router.post('/', auth, async (req: AuthenticatedRequest, res) => {
  *       500:
  *         description: Internal Server Error
  */
-router.put('/', auth, async (req: AuthenticatedRequest, res) => {
+router.put('/admin', auth, need_roles, async (req: AuthenticatedAndRolesRequest, res) => {
     const user_id = req.token?.user_id;
     const { role_id, role_name, role_description } = req.body;
     if (user_id == null) {
@@ -127,13 +126,8 @@ router.put('/', auth, async (req: AuthenticatedRequest, res) => {
         res.status(400).json({ error: 'Bad Request' });
         return;
     }
-    //check if user is admin or role 1 (admin)
-    const user = await sql`
-        SELECT admin FROM public.user u
-        JOIN public.user_role ur ON u.id = ur.user_id
-        WHERE u.id = ${user_id} AND ur.role_role_id = 1
-        OR u.id = ${user_id} AND u.admin = true`;
-    if (user.count === 0) {
+    //check if user has authority to update role
+    if (await has_aceess(req.roles || [], [1], user_id) === false) {
         res.status(401).json({ error: 'Unauthorized' });
         return;
     }
@@ -144,7 +138,7 @@ router.put('/', auth, async (req: AuthenticatedRequest, res) => {
         return;
     }
     //update role
-    const updated_role = await sql`UPDATE public.role SET role_name = ${role_name || role[0].role_name}, role_description = ${role_description || role[0].role_description } WHERE role_id = ${role_id} RETURNING *`;
+    const updated_role = await sql`UPDATE public.role SET role_name = ${role_name || role[0].role_name}, role_description = ${role_description || role[0].role_description} WHERE role_id = ${role_id} RETURNING *`;
     if (updated_role.count === 0) {
         res.status(500).json({ error: 'Internal Server Error' });
         return;
@@ -156,25 +150,46 @@ router.put('/', auth, async (req: AuthenticatedRequest, res) => {
 
 
 
-export async function roles(user_id:number) {
+export async function roles(user_id: number) {
     // return all roles id of a user
     return await sql<Role[]>`
-        SELECT *.r FROM public.user_role ur
+        SELECT r.* FROM public.user_role ur
         JOIN public.role r ON ur.role_role_id = r.role_id
         WHERE user_id = ${user_id}
     `;
 }
 
 export interface AuthenticatedAndRolesRequest extends AuthenticatedRequest {
-    roles: Role[];
+    roles?: Role[];
 }
 
 export async function need_roles(req: AuthenticatedAndRolesRequest, res: express.Response, next: express.NextFunction) {
     // add roles to req
-    const user_id = req.token.user_id;
+    const user_id = req.token?.user_id;
+    if (user_id == null) {
+        next();
+        return;
+    }
     req.roles = await roles(user_id);
+    next();
+    return;
 
 }
 
+export async function has_aceess(roles: Role[], role_id: number[], user_id: number) {
+    //return true if user has access to one of the roles
+    //superadmin has access to all roles
+
+    //check if in role user have one of the roles
+    if (roles.some((role: Role) => role_id.includes(role.role_id))) {
+        return true;
+    }
+    //check if user is superadmin
+    const user = await sql`SELECT admin FROM public.user WHERE id = ${user_id} AND admin = true`;
+    if (user.count !== 0) {
+        return true;
+    }
+    return false;
+}
 
 export default router;

@@ -11,6 +11,7 @@ import vote from './routers/vote';
 import follow from './routers/follow';
 import user from './routers/user';
 import role from './routers/role';
+import report from './routers/report';
 
 // //test mail
 // import { test } from './models/mail';
@@ -67,6 +68,7 @@ app.use('/vote', vote);
 app.use('/follow', follow);
 app.use('/user', user);
 app.use('/role', role);
+app.use('/report', report);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

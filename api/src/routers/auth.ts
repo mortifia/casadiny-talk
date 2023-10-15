@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import stringEntropy from 'fast-password-entropy';
+import isEmail from 'validator/lib/isEmail';
 import sql from '../sql/sql_client';
 
 dotenv.config();
@@ -96,7 +98,7 @@ async function generateTokens(user_id: number) {
  *    '201':
  *     description: User created successfully
  *    '400':
- *     description: Email or password is empty
+ *     description: Email or password is empty or bad format
  *    '409':
  *     description: Email already exists
  *    '500':
@@ -108,6 +110,17 @@ router.post('/signup/local', async (req, res) => {
     //check if email or password is empty
     if (!email || !password) {
         return res.status(400).json({ error: 'Email or password is empty' });
+    }
+    //check if email is valid (rfc compilant)
+    if (!isEmail(email)) {
+        return res.status(400).json({ error: 'Email is invalid' });
+    }
+    //password need an entropy of 80 ibts
+    // https://www.cnil.fr/fr/mots-de-passe-une-nouvelle-recommandation-pour-maitriser-sa-securite
+    // https://www.omnicalculator.com/other/password-entropy
+    const passwordEntropy = stringEntropy(password);
+    if (passwordEntropy < 80) {
+        return res.status(400).json({ error: `Entropy of password is too weak: ${passwordEntropy} < 80` });
     }
     //check if email already exists
     const userExist = await sql`SELECT * FROM "user" WHERE email = ${email}`;
@@ -375,7 +388,7 @@ router.post('/reset-password', async (req, res) => {
 });
 
 export interface AuthenticatedRequest extends express.Request {
-    token: {
+    token?: {
         user_id: number,
         acessTokenId: number,
         acessTokenKey: string,
