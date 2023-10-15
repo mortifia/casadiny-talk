@@ -91,6 +91,63 @@ router.get('/', auth, async (req, res) => {
     return;
 });
 
+
+//get posts by user
+/**
+ * @openapi
+ *  /post/user/{username}:
+ *   get:
+ *    description: get posts by user
+ *    security:
+ *     - bearerAuth: []
+ *    tags:
+ *     - post
+ *    parameters:
+ *     - name: username
+ *       in: path
+ *       required: true
+ *       schema:
+ *        type: string
+ *       example: "username"
+ *    responses:
+ *     200:
+ *      description: posts
+ *     400:
+ *      description: bad request
+ *     401:
+ *      description: unauthorized
+*/
+router.get('/user/:username', auth, async (req, res) => {
+    const { username } = req.params;
+    if (!username) {
+        res.status(400).json({ error: 'username is required' });
+        return;
+    }
+    const { user_id } = req.body || null;
+    const limit = 100;
+    if (user_id == null) {
+        const posts = await sql<postWithUsername[]>`
+            SELECT p.*, u.username FROM post p
+            JOIN "user" u ON p.user_id = u.id
+            WHERE u.username = ${username}
+            ORDER BY p.created DESC
+            LIMIT ${limit}`;
+        res.json(posts);
+    }
+    else {
+        const posts = await sql<postWithUsernameAndVote[]>`
+            SELECT p.*, u.username, v.positive FROM post p
+            JOIN "user" u ON p.user_id = u.id
+            LEFT JOIN vote v ON p.id = v.post_id AND v.user_id = ${user_id}
+            WHERE u.username = ${username}
+            ORDER BY p.created DESC
+            LIMIT ${limit}`;
+        res.json(posts);
+    }
+    return;
+});
+
+
 // post a new post
 /**
  * @openapi
@@ -194,10 +251,12 @@ router.delete('/:id', auth, async (req: AuthenticatedRequest, res) => {
         return;
     }
     // delete the post
+    //return true or false
     const deleted = await sql<post[]>`DELETE FROM post
-        WHERE id = ${id}`;
+        WHERE id = ${id}
+        returning id`;
     if (deleted.length === 0) {
-        res.status(500).json({ error: 'internal server error' });
+        res.status(500).json({ error: 'not found' });
         return;
     }
     res.status(200).json({ message: 'post deleted' });

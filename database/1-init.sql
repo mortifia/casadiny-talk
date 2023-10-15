@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public."user"
     first_name character varying(24) COLLATE pg_catalog."default",
     last_name character varying(24) COLLATE pg_catalog."default",
     phone character varying(24) COLLATE pg_catalog."default",
+    admin boolean NOT NULL DEFAULT false,
     CONSTRAINT user_pkey PRIMARY KEY (id)
 );
 
@@ -56,6 +57,8 @@ CREATE TABLE IF NOT EXISTS public.post
     text character varying(256) COLLATE pg_catalog."default" NOT NULL,
     score bigint NOT NULL DEFAULT 0,
     post_parent_id character(22) COLLATE pg_catalog."default",
+    is_deleted boolean NOT NULL DEFAULT false,
+    child_post_count integer NOT NULL DEFAULT 0,
     CONSTRAINT post_pkey PRIMARY KEY (id)
 );
 
@@ -75,6 +78,15 @@ CREATE TABLE IF NOT EXISTS public.password_reset
     created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ip cidr NOT NULL,
     PRIMARY KEY (user_id, mail_key)
+);
+
+CREATE TABLE IF NOT EXISTS public.reported_post
+(
+    post_id character varying(22),
+    user_id integer,
+    reason character varying,
+    datetime timestamp with time zone,
+    PRIMARY KEY (post_id, user_id)
 );
 
 ALTER TABLE IF EXISTS public."authorization"
@@ -150,6 +162,22 @@ ALTER TABLE IF EXISTS public.vote
 
 
 ALTER TABLE IF EXISTS public.password_reset
+    ADD FOREIGN KEY (user_id)
+    REFERENCES public."user" (id) MATCH SIMPLE
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+    NOT VALID;
+
+
+ALTER TABLE IF EXISTS public.reported_post
+    ADD FOREIGN KEY (post_id)
+    REFERENCES public.post (id) MATCH SIMPLE
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+    NOT VALID;
+
+
+ALTER TABLE IF EXISTS public.reported_post
     ADD FOREIGN KEY (user_id)
     REFERENCES public."user" (id) MATCH SIMPLE
     ON UPDATE CASCADE

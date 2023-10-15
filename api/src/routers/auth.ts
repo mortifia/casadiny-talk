@@ -375,7 +375,7 @@ router.post('/reset-password', async (req, res) => {
 });
 
 export interface AuthenticatedRequest extends express.Request {
-    token?: {
+    token: {
         user_id: number,
         acessTokenId: number,
         acessTokenKey: string,
@@ -395,9 +395,11 @@ export interface AuthenticatedRequest extends express.Request {
  *    bearerFormat: JWT
 */
 export function auth(req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) {
+    // console.log("coucou");
     //bearer jwt
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
+    // console.log(token);
     //check if token is empty
     if (!token) {
         next();
