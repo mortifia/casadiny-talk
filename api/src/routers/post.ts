@@ -82,19 +82,13 @@ router.get('/', auth, need_roles, async (req: AuthenticatedAndRolesRequest, res)
     if (user_id == null) {
         // for posterity, uuid to base64url
         // select TRANSLATE(ENCODE(DECODE(REPLACE('842952d3-a012-4c2e-b1ef-4c52787b8c98'::text,'-',''),'hex'),'base64'),'/+=','_-');
-        const posts = soft_delete
-            ? await sql<postWithUsername[]>`
+        const posts = await sql<postWithUsername[]>`
                 SELECT p.id, p.user_id, p.created, p.text, p.score, p.post_parent_id, p.child_post_count
                 , u.username FROM post p
                 JOIN "user" u ON p.user_id = u.id
-                WHERE p.is_deleted = false OR p.user_id = ${userId}
+                WHERE p.is_deleted = false 
                 ORDER BY (p.score / EXTRACT(EPOCH FROM (NOW() - p.created)) / 3600) DESC
                 LIMIT ${limit} OFFSET ${offset}`
-            : await sql<postWithUsername[]>`
-                SELECT p.*, u.username FROM post p
-                JOIN "user" u ON p.user_id = u.id
-                ORDER BY (p.score / EXTRACT(EPOCH FROM (NOW() - p.created)) / 3600) DESC
-                LIMIT ${limit} OFFSET ${offset}`;
         res.json(posts);
     }
     else {
